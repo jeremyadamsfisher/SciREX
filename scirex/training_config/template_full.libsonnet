@@ -7,6 +7,8 @@ function(p) {
   local lstm_hidden_size = 200,
   local token_embedding_dim = bert_base_dim,
   local context_encoder_dim = 2 * lstm_hidden_size,
+  local ner_features = 1,
+  local ner_encoder_dim = context_encoder_dim + ner_features,
   local endpoint_span_embedding_dim = 2 * context_encoder_dim,
   local attended_span_embedding_dim = context_encoder_dim,
   local span_embedding_dim = endpoint_span_embedding_dim + attended_span_embedding_dim,
@@ -78,7 +80,7 @@ function(p) {
         antecedent_feedforward: make_feedforward(featured_embedding_dim),
       },
       ner: {
-        mention_feedforward: make_feedforward(context_encoder_dim),
+        mention_feedforward: make_feedforward(ner_encoder_dim),
         label_encoding: 'BIOUL',
         exact_match: p.exact_match
       },

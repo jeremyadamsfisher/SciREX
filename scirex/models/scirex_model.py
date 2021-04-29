@@ -90,7 +90,8 @@ class ScirexModel(Model):
         output_embedding = self.embedding_forward(text)
 
         if self._loss_weights["ner"] > 0.0:
-            output_dict["ner"] = self.ner_forward(output_embedding=output_embedding, ner_type_labels=ner_type_labels, metadata=metadata)
+            output_dict["ner"] = self.ner_forward(output_embedding=output_embedding, ner_type_labels=ner_type_labels,
+                                                  metadata=metadata)
             loss += self._loss_weights["ner"] * output_dict["ner"]["loss"]
 
         output_span_embedding = self.span_embeddings_forward(
@@ -156,10 +157,11 @@ class ScirexModel(Model):
     def ner_forward(self, output_embedding, ner_type_labels, metadata):
         output_ner = {"loss": 0.0}
 
+        word_position = self.get_words_position(metadata, output_embedding["mask"])
+        ner_embedding = torch.cat([output_embedding["contextualised"], word_position], dim=-1)
         output_ner = self._ner(
-            output_embedding["contextualised"], output_embedding["mask"], ner_type_labels, metadata
+            ner_embedding, output_embedding["mask"], ner_type_labels, metadata
         )
-
         if self.prediction_mode:
             output_ner = self._ner.decode(output_ner)
             output_ner["spans"] = output_ner["spans"].to(output_embedding["text"].device).long()
@@ -181,7 +183,6 @@ class ScirexModel(Model):
                 span_type_labels_one_hot = self.get_span_one_hot_labels(
                     "span_type_labels", span_type_labels, spans
                 )
-
                 span_features = torch.cat(
                     [span_position, span_type_labels_one_hot, span_features.float()], dim=-1
                 )
@@ -230,7 +231,6 @@ class ScirexModel(Model):
 
     def relation_forward(self, output_span_embedding, metadata, relation_to_cluster_ids, span_cluster_labels):
         output_n_ary_relation = {"loss": 0.0}
-
         if output_span_embedding["valid"]:
             spans, featured_span_embeddings, span_ix, span_mask = (
                 output_span_embedding["spans"],
@@ -311,6 +311,21 @@ class ScirexModel(Model):
         emb_flat = span_info_batched.view(-1, feature_size)
         span_info_flat = emb_flat[span_ix].unsqueeze(0)
         return span_info_flat
+
+    @staticmethod
+    def get_words_position(metadata, embedding_mask):
+        batches = embedding_mask.shape[0]
+        nums = torch.arange(embedding_mask.shape[1])
+        nums = nums.repeat(batches, 1)
+        nums = nums.float()
+        for i in range(batches):
+            nums[i] = nums[i] + metadata[i]['start_pos_in_doc']
+
+        word_position = torch.mul(embedding_mask, nums)
+        doc_length = metadata[0]["document_metadata"]["doc_length"]
+        word_position = word_position/doc_length
+        word_position.unsqueeze_(-1)
+        return word_position
 
     @staticmethod
     def get_span_position(metadata, span_offset):
