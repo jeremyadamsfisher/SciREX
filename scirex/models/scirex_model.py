@@ -318,6 +318,7 @@ class ScirexModel(Model):
         nums = torch.arange(embedding_mask.shape[1])
         nums = nums.repeat(batches, 1)
         nums = nums.float()
+        nums = nums.to(device = 'cuda')
         for i in range(batches):
             nums[i] = nums[i] + metadata[i]['start_pos_in_doc']
 
