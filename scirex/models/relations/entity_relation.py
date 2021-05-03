@@ -29,7 +29,6 @@ class RelationExtractor(Model):
         regularizer: Optional[RegularizerApplicator] = None,
     ) -> None:
         super(RelationExtractor, self).__init__(vocab, regularizer)
-
         self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
         self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
         self._span_embedding_size = antecedent_feedforward.get_input_dim() // 4
@@ -208,7 +207,7 @@ class RelationExtractor(Model):
             "candidates": output_dict.get("relations_candidates_list", []),
             "gold": output_dict.get("relations_true_list", []),
             "scores": output_dict.get("relation_scores", np.array([])),
-            "metadata" : output_dict['metadata']
+            "metadata" : output_dict.get('metadata', [])
         }
 
         if len(new_output_dict["scores"]) > 0:
