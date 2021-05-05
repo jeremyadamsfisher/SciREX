@@ -58,7 +58,7 @@ class NAryRelationMetrics(Metric):
                 key=lambda x: x[1]
             )
             prediction[k_max] = 1
-        elif os.environ.get("SCIREX_PROBABILISTIC_DECODING", False):
+        elif os.environ.get("SCIREX_PROBABILISTIC_DECODING", False) and 0 < len(prediction):
             def score_decoding(decoding_idxs):
                 """likelihood function for a geometric distribution fit
                 to the training distribution of number-of-relationships-per-document
