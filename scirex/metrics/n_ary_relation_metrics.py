@@ -74,7 +74,7 @@ class NAryRelationMetrics(Metric):
                     score_from_indiv_relationships = [self._candidate_scores.get(k) for k in decoding_idxs]
                     return score_from_n_relationships * np.prod(score_from_indiv_relationships)
                 idxs_sorted_by_score = sorted(self._candidate_labels, key=self._candidate_scores.get, reverse=True)
-                possible_decoding_idxs = [idxs_sorted_by_score[:i] for i in range(1, len(idxs_sorted_by_score))]
+                possible_decoding_idxs = [idxs_sorted_by_score[:i] for i in range(1, len(idxs_sorted_by_score) + 1)]
                 best_decoding_idxs = max(possible_decoding_idxs, key=score_decoding)
                 prediction = [1 if k in best_decoding_idxs else 0 for k in self._candidate_labels]
         try:
