@@ -52,30 +52,31 @@ class NAryRelationMetrics(Metric):
         except:
             breakpoint()
         prediction = [1 if self._candidate_scores[k] > threshold else 0 for k in self._candidate_labels]
-        if all(pred == 0 for pred in prediction) and os.environ.get("SCIREX_REPORT_MOST_LIKELY_WHEN_OTHERWISE_NONE_REPORTED", False):
-            k_max, _ = max(
-                [(k, self._candidate_scores[k]) for k in self._candidate_labels],
-                key=lambda x: x[1]
-            )
-            prediction[k_max] = 1
-        elif os.environ.get("SCIREX_PROBABILISTIC_DECODING", False) and 0 < len(prediction):
-            def score_decoding(decoding_idxs):
-                """likelihood function for a geometric distribution fit
-                to the training distribution of number-of-relationships-per-document
-
-                :param decoding_idxs (List[int]): a list of idxs
-                :return: likelihood of a single decoding
-                """
-                score_from_n_relationships = st.geom.pmf(
-                    len(decoding_idxs),
-                    0.4046692607003891  # MLE from training distribution, i.e.: 1 / (1 + E[X])
+        if all(pred == 0 for pred in prediction):
+            if os.environ.get("SCIREX_REPORT_MOST_LIKELY_WHEN_OTHERWISE_NONE_REPORTED", False):
+                k_max, _ = max(
+                    [(k, self._candidate_scores[k]) for k in self._candidate_labels],
+                    key=lambda x: x[1]
                 )
-                score_from_indiv_relationships = [self._candidate_scores.get(k) for k in decoding_idxs]
-                return score_from_n_relationships * np.prod(score_from_indiv_relationships)
-            idxs_sorted_by_score = sorted(self._candidate_labels, key=self._candidate_scores.get, reverse=True)
-            possible_decoding_idxs = [idxs_sorted_by_score[:i] for i in range(1, len(idxs_sorted_by_score))]
-            best_decoding_idxs = max(possible_decoding_idxs, key=score_decoding)
-            prediction = [1 if k in best_decoding_idxs else 0 for k in self._candidate_labels]
+                prediction[k_max] = 1
+            elif os.environ.get("SCIREX_PROBABILISTIC_DECODING", False):
+                def score_decoding(decoding_idxs):
+                    """likelihood function for a geometric distribution fit
+                    to the training distribution of number-of-relationships-per-document
+
+                    :param decoding_idxs (List[int]): a list of idxs
+                    :return: likelihood of a single decoding
+                    """
+                    score_from_n_relationships = st.geom.pmf(
+                        len(decoding_idxs),
+                        0.4046692607003891  # MLE from training distribution, i.e.: 1 / (1 + E[X])
+                    )
+                    score_from_indiv_relationships = [self._candidate_scores.get(k) for k in decoding_idxs]
+                    return score_from_n_relationships * np.prod(score_from_indiv_relationships)
+                idxs_sorted_by_score = sorted(self._candidate_labels, key=self._candidate_scores.get, reverse=True)
+                possible_decoding_idxs = [idxs_sorted_by_score[:i] for i in range(1, len(idxs_sorted_by_score) + 1)]
+                best_decoding_idxs = max(possible_decoding_idxs, key=score_decoding)
+                prediction = [1 if k in best_decoding_idxs else 0 for k in self._candidate_labels]
         try:
             metrics = pd.io.json.json_normalize(
                 classification_report(gold, prediction, output_dict=True), sep="."
