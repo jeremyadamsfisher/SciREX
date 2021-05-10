@@ -75,6 +75,8 @@ function(p) {
     lexical_dropout: 0.2,
     display_metrics: ["validation_metric"],
     context_layer: lstm_context_encoder,
+    regularizer: p.regularizer,
+    initializer: p.initializer,
     modules: {
       coref: {
         antecedent_feedforward: make_feedforward(featured_embedding_dim),
