@@ -10,6 +10,8 @@ export BERT_WEIGHTS=$BERT_BASE_FOLDER/weights.tar.gz
 #####################################################
 #####################################################
 export CONFIG_FILE=scirex/training_config/gbi.jsonnet
+# this comes from metrics/best_validation__n_ary_rel_global_threshold
+export RELATIONSHIP_THRESHOLD=0.6159292929292929
 export GBI_LOSS_FUNCTION=1
 #####################################################
 #####################################################

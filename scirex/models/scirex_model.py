@@ -1,4 +1,5 @@
 import copy
+import os
 import logging
 from typing import Dict, List, Optional
 
@@ -108,9 +109,20 @@ class ScirexModel(Model):
                 relation_to_cluster_ids,
                 span_cluster_labels,
             )
+            nrln = output_dict["n_ary_relation"]
+            if "metadata" in nrln:
+                _0th_doc_id = metadata[0]["doc_id"]
+                if not all(m["doc_id"] == _0th_doc_id for m in metadata):
+                    raise Exception("not sure whats going on here")
+            n_ary_relation_loss = output_dict["n_ary_relation"]["loss"]
+            if os.environ.get("GBI_LOSS_FUNCTION", False) and "metadata" in output_dict:
+                relation_threshold = float(os.environ["RELATIONSHIP_THRESHOLD"])
+                highest_relation_prob = nrln["relation_scores"].max()
+                if highest_relation_prob < relation_threshold:
+                    global_constraint_loss = relation_threshold - highest_relation_prob
+                    n_ary_relation_loss *= global_constraint_loss
             loss += self._loss_weights["saliency"] * output_dict["saliency"]["loss"]
-            loss += self._loss_weights["n_ary_relation"] * output_dict["n_ary_relation"]["loss"]
-
+            loss += self._loss_weights["n_ary_relation"] * n_ary_relation_loss
         output_dict["loss"] = loss
         for k in self._multi_task_loss_metrics:
             if k in output_dict:
