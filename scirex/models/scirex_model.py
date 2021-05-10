@@ -9,7 +9,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.span_extractors import EndpointSpanExtractor, SelfAttentiveSpanExtractor
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, util
+from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Average
 from overrides import overrides
 
@@ -17,6 +17,9 @@ from overrides import overrides
 from scirex.models.relations.entity_relation import RelationExtractor as NAryRelationExtractor
 from scirex.models.ner.ner_crf_tagger import NERTagger
 from scirex.models.span_classifiers.span_classifier import SpanClassifier
+
+# 11-711 stuff
+from scirex.models.GbiRegularizerApplicator import GbiRegularizerApplicator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -32,7 +35,7 @@ class ScirexModel(Model):
         loss_weights: Dict[str, int],
         lexical_dropout: float = 0.2,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        regularizer: Optional[GbiRegularizerApplicator] = None,
         display_metrics: List[str] = None,
     ) -> None:
         super(ScirexModel, self).__init__(vocab, regularizer)
