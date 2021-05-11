@@ -2,11 +2,14 @@
 
 import json
 import os
+import warnings
 from sys import argv
 from typing import Dict, List, Tuple
 from tqdm import tqdm
 
+import numpy as np
 import torch
+import scipy.stats as st
 
 from allennlp.common.util import import_submodules
 from allennlp.data import DataIterator, DatasetReader
@@ -78,8 +81,10 @@ def predict(archive_folder, span_file, cluster_file, output_file, cuda_device):
 
             n_ary_relations = output_res['n_ary_relation']
             predicted_relations, scores = n_ary_relations['candidates'], n_ary_relations['scores']
-
-            metadata = output_res['n_ary_relation']['metadata'][0]
+            try:
+                metadata = output_res['n_ary_relation']['metadata'][0]
+            except (KeyError, IndexError):
+                continue
             doc_id = metadata['doc_id']
             coref_key_map = {k:i for i, k in metadata['document_metadata']['cluster_name_to_id'].items()}
         
@@ -88,8 +93,40 @@ def predict(archive_folder, span_file, cluster_file, output_file, cuda_device):
 
             if doc_id not in documents :
                 documents[doc_id] = {'predicted_relations' : [], 'doc_id' : doc_id}
+            scores_ = list(scores.ravel())
+            if not scores_:
+                warnings.warn(f"no relation scores defined for {doc_id}")
+                continue
+            label = [1 if x > relation_threshold else 0 for x in scores_]
+            if all(l == 0 for l in label):
+                decoding_mode = os.environ.get("SCIREX_RELATION_DECODING")
+                if decoding_mode == "report_single_most_likely":
+                    label[scores.argmax()] = 1
+                elif decoding_mode == "report_probabilistically":
+                    idxs_sorted_by_score = sorted(
+                        range(len(label)),
+                        key=lambda i: scores[i],
+                        reverse=True  # highest score first
+                    )
+                    possible_decoding_idxs = \
+                        [idxs_sorted_by_score[:i] for i in range(1, 11)]  # assuming that >10 relationships would never happen
+                    def score_decoding(candidate_idxs):
+                        """likelihood function for a geometric distribution fit
+                        to the training distribution of number-of-relationships-per-document
 
-            label = [1 if x > relation_threshold else 0 for x in list(scores.ravel())]
+                        :param candidate_idxs (List[int]): a list of idxs that represents a relationship distribution
+                        :return: likelihood that distribution
+                        """
+                        score_from_n_relationships = st.geom.pmf(
+                            len(candidate_idxs),
+                            0.4046692607003891  # MLE from training distribution, i.e.: 1 / (1 + E[X])
+                        )
+                        score_from_indiv_relationships = scores[candidate_idxs]
+                        return score_from_n_relationships * np.prod(score_from_indiv_relationships)
+                    best_decoding_idxs = max(possible_decoding_idxs, key=score_decoding)
+                    for idx in best_decoding_idxs:
+                        label[idx] = 1
+
             scores = [round(float(x), 4) for x in list(scores.ravel())]
             documents[doc_id]['predicted_relations'] += list(zip(predicted_relations, scores, label))
 

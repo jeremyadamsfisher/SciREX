@@ -1,3 +1,4 @@
+import os
 import argparse
 from itertools import combinations
 from typing import Dict
@@ -122,7 +123,9 @@ def main(args):
 
         all_metrics = pd.DataFrame(all_metrics)
         print(f"Relation Metrics n={n}")
-        print(all_metrics.describe().loc['mean'][['p', 'r', 'f1']])
+        rln_metrics = all_metrics.describe().loc['mean'][['p', 'r', 'f1']]
+        print(rln_metrics)
+        rln_metrics.to_json(os.environ["DECODING_METRICS_OUTFP"])
 
 
 if __name__ == "__main__":
