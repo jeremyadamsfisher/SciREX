@@ -36,7 +36,8 @@ class ScirexModel(Model):
         loss_weights: Dict[str, int],
         lexical_dropout: float = 0.2,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[GbiRegularizerApplicator] = None,
+        regularizer = None,
+        #regularizer: Optional[GbiRegularizerApplicator] = None,
         display_metrics: List[str] = None,
     ) -> None:
         super(ScirexModel, self).__init__(vocab, regularizer)
